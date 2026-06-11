@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Medical Decision Guide</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #f0f4f8;
+    min-height: 100vh;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 2rem 1rem;
+    color: #1a2332;
+  }
+
+  .app {
+    background: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 2px 16px rgba(0,0,0,0.08);
+    width: 100%;
+    max-width: 560px;
+    overflow: hidden;
+  }
+
+  .app-header {
+    background: #1a4f72;
+    padding: 1.5rem 1.75rem;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .app-header svg {
+    flex-shrink: 0;
+    opacity: 0.9;
+  }
+
+  .app-header-text h1 {
+    font-size: 17px;
+    font-weight: 600;
+    color: #ffffff;
+    letter-spacing: -0.01em;
+  }
+
+  .app-header-text p {
+    font-size: 12px;
+    color: rgba(255,255,255,0.65);
+    margin-top: 2px;
+  }
+
+  .app-body {
+    padding: 1.5rem 1.75rem;
+  }
+
+  .screen { display: none; }
+  .screen.active { display: block; }
+
+  .breadcrumb {
+    font-size: 11px;
+    color: #8a99aa;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    flex-wrap: wrap;
+  }
+
+  .breadcrumb span + span::before {
+    content: '›';
+    margin-right: 5px;
+    color: #c5cdd6;
+  }
+
+  .section-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: #8a99aa;
+    margin-bottom: 10px;
+  }
+
+  .screen-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: #1a2332;
+    margin-bottom: 4px;
+    letter-spacing: -0.02em;
+  }
+
+  .screen-sub {
+    font-size: 13px;
+    color: #6b7c8d;
+    margin-bottom: 1.5rem;
+    line-height: 1.5;
+  }
+
+  .choice-btn {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    text-align: left;
+    padding: 13px 16px;
+    margin-bottom: 8px;
+    border-radius: 10px;
+    border: 1.5px solid #e2e8ef;
+    background: #ffffff;
+    color: #1a2332;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+    font-family: inherit;
+  }
+
+  .choice-btn:hover {
+    border-color: #1a4f72;
+    background: #f4f8fb;
+  }
+
+  .choice-btn .btn-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  .choice-btn .arrow {
+    color: #c5cdd6;
+    font-size: 18px;
+    line-height: 1;
+  }
+
+  .badge {
+    font-size: 10px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 20px;
+    white-space: nowrap;
+  }
+
+  .badge-caution { background: #fff3e0; color: #a05e00; }
+  .badge-minor   { background: #e8f5e9; color: #2e7d32; }
+  .badge-complex { background: #fce8e4; color: #a33020; }
+  .badge-pending { background: #e3f0fb; color: #1a5a8a; }
+
+  .action-block {
+    background: #f7f9fc;
+    border: 1px solid #e8edf3;
+    border-radius: 10px;
+    padding: 13px 15px;
+    margin-bottom: 10px;
+  }
+
+  .action-block-title {
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #1a4f72;
+    margin-bottom: 8px;
+  }
+
+  .action-item {
+    font-size: 13.5px;
+    color: #3a4a5a;
+    padding: 3px 0;
+    display: flex;
+    gap: 9px;
+    line-height: 1.45;
+  }
+
+  .action-item::before {
+    content: "→";
+    color: #b0bec8;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+  .divider {
+    border: none;
+    border-top: 1px solid #e8edf3;
+    margin: 14px 0;
+  }
+
+  .stage-pill {
+    display: inline-block;
+    font-size: 11.5px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 20px;
+    vertical-align: middle;
+  }
+
+  .stage-new      { background: #e8f5e9; color: #2e7d32; }
+  .stage-behavior { background: #fff3e0; color: #a05e00; }
+  .stage-adopt    { background: #e0f2f1; color: #00695c; }
+  .stage-surgery  { background: #fce8e4; color: #a33020; }
+  .stage-pending  { background: #e3f0fb; color: #1a5a8a; }
+  .stage-euth     { background: #fce8e8; color: #9a2020; }
+
+  .caution-banner {
+    background: #fff8e1;
+    border: 1px solid #ffe082;
+    border-radius: 10px;
+    padding: 11px 14px;
+    margin-bottom: 16px;
+    font-size: 12.5px;
+    color: #7a5500;
+    display: flex;
+    gap: 9px;
+    align-items: flex-start;
+    line-height: 1.5;
+  }
+
+  .caution-banner svg { flex-shrink: 0; margin-top: 1px; }
+
+  .back-btn {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 13px;
+    color: #6b7c8d;
+    border: none;
+    background: none;
+    cursor: pointer;
+    padding: 0;
+    margin-bottom: 1.25rem;
+    font-family: inherit;
+    font-weight: 500;
+  }
+
+  .back-btn:hover { color: #1a4f72; }
+
+  .restart-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 1.25rem;
+    font-size: 13px;
+    color: #8a99aa;
+    border: 1px solid #e2e8ef;
+    background: none;
+    cursor: pointer;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-family: inherit;
+    font-weight: 500;
+    transition: background 0.15s;
+  }
+
+  .restart-btn:hover { background: #f7f9fc; color: #1a4f72; }
+
+  .final-title {
+    font-size: 19px;
+    font-weight: 700;
+    color: #1a2332;
+    margin-bottom: 3px;
+    letter-spacing: -0.02em;
+  }
+
+  .final-sub {
+    font-size: 13px;
+    color: #6b7c8d;
+    margin-bottom: 1.25rem;
+    line-height: 1.5;
+  }
+
+  @media (max-width: 480px) {
+    body { padding: 0; align-items: stretch; }
+    .app { border-radius: 0; min-height: 100vh; box-shadow: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="app-header">
+    <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect width="32" height="32" rx="8" fill="rgba(255,255,255,0.12)"/>
+      <path d="M16 7v18M7 16h18" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+    </svg>
+    <div class="app-header-text">
+      <h1>Medical Decision Guide</h1>
+      <p>Animal intake &amp; medical workflow</p>
+    </div>
+  </div>
+
+  <div class="app-body">
+
+    <!-- START -->
+    <div id="screen-start" class="screen active">
+      <div class="screen-title">Where are we starting?</div>
+      <div class="screen-sub">Select the animal's current stage to begin.</div>
+      <div class="section-label">Current stage</div>
+      <button class="choice-btn" onclick="go('stage','new-arrival-medical')">
+        New arrival medical
+        <span class="btn-right"><span class="arrow">›</span></span>
+      </button>
+      <button class="choice-btn" onclick="go('stage','new-arrival-caution')">
+        New arrival medical — use caution
+        <span class="btn-right"><span class="badge badge-caution">caution</span><span class="arrow">›</span></span>
+      </button>
+      <button class="choice-btn" onclick="go('stage','pending')">
+        Pending medical assessment
+        <span class="btn-right"><span class="badge badge-pending">hold complete</span><span class="arrow">›</span></span>
+      </button>
+    </div>
+
+    <!-- CASE TYPE -->
+    <div id="screen-case-type" class="screen">
+      <button class="back-btn" onclick="back('screen-start')">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 12L6 8l4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Back
+      </button>
+      <div class="breadcrumb" id="bc-case-type"></div>
+      <div id="caution-banner-case"></div>
+      <div class="screen-title">What type of case?</div>
+      <div class="screen-sub">Choose based on the complexity of the animal's medical needs.</div>
+      <div class="section-label">Case type</div>
+      <button class="choice-btn" onclick="go('complexity','minor')">
+        Minor
+        <span class="btn-right"><span class="badge badge-minor">moves quickly</span><span class="arrow">›</span></span>
+      </button>
+      <button class="choice-btn" onclick="go('complexity','complex')">
+        Complex
+        <span class="btn-right"><span class="badge badge-complex">further assessment</span><span class="arrow">›</span></span>
+      </button>
+    </div>
+
+    <!-- CONDITION -->
+    <div id="screen-condition" class="screen">
+      <button class="back-btn" onclick="back('screen-case-type')">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 12L6 8l4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Back
+      </button>
+      <div class="breadcrumb" id="bc-condition"></div>
+      <div class="screen-title">Animal's condition?</div>
+      <div class="screen-sub">Select the condition that applies.</div>
+      <div class="section-label">Condition</div>
+      <button class="choice-btn" onclick="go('action','altered')">
+        Altered
+        <span class="btn-right"><span class="arrow">›</span></span>
+      </button>
+      <button class="choice-btn" onclick="go('action','surgery')">
+        Needs surgery / sedation / HW+
+        <span class="btn-right"><span class="arrow">›</span></span>
+      </button>
+    </div>
+
+    <!-- PENDING CONDITION -->
+    <div id="screen-pending-condition" class="screen">
+      <button class="back-btn" onclick="back('screen-start')">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 12L6 8l4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Back
+      </button>
+      <div class="breadcrumb"><span>Pending medical assessment</span></div>
+      <div class="screen-title">Animal's condition?</div>
+      <div class="screen-sub">Select the condition after reviewing the animal's notes.</div>
+      <div class="section-label">Condition</div>
+      <button class="choice-btn" onclick="go('action','pending-intact')">
+        Intact
+        <span class="btn-right"><span class="arrow">›</span></span>
+      </button>
+      <button class="choice-btn" onclick="go('action','pending-surgery')">
+        Needs surgery / sedation / HW+
+        <span class="btn-right"><span class="arrow">›</span></span>
+      </button>
+    </div>
+
+    <!-- ACTION -->
+    <div id="screen-action" class="screen">
+      <button class="back-btn" id="action-back-btn">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 12L6 8l4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Back
+      </button>
+      <div class="breadcrumb" id="bc-action"></div>
+      <div class="final-title" id="action-title"></div>
+      <div class="final-sub" id="action-sub"></div>
+      <div id="action-content"></div>
+      <button class="restart-btn" onclick="restart()">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 7a5 5 0 1 0 1-2.9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M2 3v4h4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Start over
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<script>
+let state = {};
+
+const stageLabels = {
+  'new-arrival-medical': 'New arrival medical',
+  'new-arrival-caution': 'New arrival medical — use caution',
+  'pending': 'Pending medical assessment'
+};
+
+function show(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0, 0);
+}
+
+function go(step, val) {
+  if (step === 'stage') {
+    state.stage = val;
+    if (val === 'pending') {
+      show('screen-pending-condition');
+    } else {
+      const bc = document.getElementById('bc-case-type');
+      bc.innerHTML = '<span>' + stageLabels[val] + '</span>';
+      const banner = document.getElementById('caution-banner-case');
+      if (val === 'new-arrival-caution') {
+        banner.innerHTML = '<div class="caution-banner"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 2L1 14h14L8 2z" stroke="#a05e00" stroke-width="1.5" stroke-linejoin="round"/><path d="M8 6v4M8 11.5v.5" stroke="#a05e00" stroke-width="1.5" stroke-linecap="round"/></svg><span>Scan only at medical exam — do not chip at intake. If surgery is scheduled, chip is inserted at time of surgery.</span></div>';
+      } else {
+        banner.innerHTML = '';
+      }
+      show('screen-case-type');
+    }
+  } else if (step === 'complexity') {
+    state.complexity = val;
+    const bc = document.getElementById('bc-condition');
+    bc.innerHTML = '<span>' + stageLabels[state.stage] + '</span><span>' + (val === 'minor' ? 'Minor' : 'Complex') + '</span>';
+    show('screen-condition');
+  } else if (step === 'action') {
+    state.action = val;
+    renderAction();
+    show('screen-action');
+  }
+}
+
+function back(target) { show(target); }
+
+function restart() {
+  state = {};
+  show('screen-start');
+}
+
+function stagePill(original) {
+  if (original === 'new-arrival-medical') return '<span class="stage-pill stage-new">New arrival</span>';
+  if (original === 'new-arrival-caution') return '<span class="stage-pill stage-behavior">New arrival behavior</span>';
+  return '';
+}
+
+function block(title, items) {
+  return '<div class="action-block"><div class="action-block-title">' + title + '</div>' +
+    items.map(i => '<div class="action-item">' + i + '</div>').join('') +
+    '</div>';
+}
+
+function renderAction() {
+  const s = state;
+  const isCaution = s.stage === 'new-arrival-caution';
+  const stageLabel = stageLabels[s.stage] || '';
+  let breadcrumbHTML = '', title = '', sub = '', html = '';
+
+  document.getElementById('action-back-btn').onclick = function() {
+    if (s.stage === 'pending') back('screen-pending-condition');
+    else back('screen-condition');
+  };
+
+  if (s.stage === 'pending') {
+    const condLabel = s.action === 'pending-intact' ? 'Intact' : 'Needs surgery / sedation / HW+';
+    breadcrumbHTML = '<span>Pending medical assessment</span><span>' + condLabel + '</span>';
+    title = 'Review and choose next step';
+    sub = 'Review all notes, then select the appropriate path.';
+
+    if (s.action === 'pending-intact') {
+      html += block('Option 1 — continue treatment', [
+        'Continue current treatment plan',
+        'Monitor and reassess'
+      ]);
+      html += block('Option 2 — move to adopt', [
+        'Change stage to <span class="stage-pill stage-adopt">Move to adopt</span>'
+      ]);
+      html += block('Option 3 — euthanasia', [
+        'Consult with team and document decision',
+        'Change stage to <span class="stage-pill stage-euth">Euthanasia</span>'
+      ]);
+    } else {
+      html += block('Option 1 — continue treatment', [
+        'Continue current treatment plan',
+        'Monitor and reassess'
+      ]);
+      html += block('Option 2 — schedule surgery', [
+        'Schedule surgery / sedation / HW+ treatment',
+        'Change stage to <span class="stage-pill stage-surgery">Surgery</span>',
+        'After completion → change stage to <span class="stage-pill stage-adopt">Move to adopt</span>'
+      ]);
+      html += block('Option 3 — euthanasia', [
+        'Consult with team and document decision',
+        'Change stage to <span class="stage-pill stage-euth">Euthanasia</span>'
+      ]);
+    }
+
+  } else if (s.complexity === 'minor' && s.action === 'altered') {
+    breadcrumbHTML = '<span>' + stageLabel + '</span><span>Minor</span><span>Altered</span>';
+    title = 'Minor — altered';
+    sub = 'Animal can move through quickly after hold.';
+    html += block('During medical exam', [
+      isCaution ? 'Scan for chip only — do not chip at intake' : 'Scan / chip if needed',
+      'Complete exam notes in PP',
+      'Add "after hold — move to adoption" template at bottom of exam notes'
+    ]);
+    html += '<hr class="divider">';
+    html += block('Change stage to', [stagePill(s.stage)]);
+
+  } else if (s.complexity === 'minor' && s.action === 'surgery') {
+    breadcrumbHTML = '<span>' + stageLabel + '</span><span>Minor</span><span>Surgery / sedation / HW+</span>';
+    title = 'Minor — surgery / sedation / HW+';
+    sub = 'Follow the steps below in order.';
+    html += block('During medical exam', [
+      'Scan for chip',
+      'Schedule surgery / sedation',
+      'Complete exam notes in PP',
+      'Add "after hold — change stage to surgery" template at bottom of exam notes'
+    ]);
+    html += block('At time of surgery', [
+      isCaution ? 'Insert chip (if needed)' : 'Chip if needed',
+      'Perform surgery / sedation / HW+ treatment'
+    ]);
+    html += '<hr class="divider">';
+    html += block('Change stage to', [stagePill(s.stage)]);
+
+  } else if (s.complexity === 'complex' && s.action === 'altered') {
+    breadcrumbHTML = '<span>' + stageLabel + '</span><span>Complex</span><span>Altered</span>';
+    title = 'Complex — altered';
+    sub = 'Further medical assessment required after hold.';
+    html += block('During medical exam', [
+      isCaution ? 'Scan for chip only — do not chip at intake' : 'Scan for chip',
+      'Complete exam notes in PP',
+      'Add one of the following templates at bottom of exam notes:',
+      '"After hold — pending medical assessment"',
+      '"After hold — recommend rescue placement"'
+    ]);
+    html += '<hr class="divider">';
+    html += block('Change stage to', [stagePill(s.stage)]);
+
+  } else if (s.complexity === 'complex' && s.action === 'surgery') {
+    breadcrumbHTML = '<span>' + stageLabel + '</span><span>Complex</span><span>Surgery / sedation / HW+</span>';
+    title = 'Complex — surgery / sedation / HW+';
+    sub = 'Follow the steps below in order.';
+    html += block('During medical exam', [
+      'Scan for chip',
+      'Complete exam notes in PP',
+      'Add one of the following templates at bottom of exam notes:',
+      '"After hold — pending medical assessment"',
+      '"After hold — recommend rescue placement"'
+    ]);
+    html += block('At time of surgery', [
+      isCaution ? 'Insert chip (if needed)' : 'Chip if needed',
+      'Perform surgery / sedation / HW+ treatment'
+    ]);
+    html += '<hr class="divider">';
+    html += block('Change stage to', [stagePill(s.stage)]);
+  }
+
+  document.getElementById('bc-action').innerHTML = breadcrumbHTML;
+  document.getElementById('action-title').textContent = title;
+  document.getElementById('action-sub').textContent = sub;
+  document.getElementById('action-content').innerHTML = html;
+}
+</script>
+</body>
+</html>
