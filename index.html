@@ -365,7 +365,7 @@
       <div class="screen-sub">Select the condition after reviewing the animal's notes.</div>
       <div class="section-label">Condition</div>
       <button class="choice-btn" onclick="go('action','pending-intact')">
-        Intact
+        Altered
         <span class="btn-right"><span class="arrow">›</span></span>
       </button>
       <button class="choice-btn" onclick="go('action','pending-surgery')">
@@ -467,7 +467,7 @@ function renderAction() {
   };
 
   if (s.stage === 'pending') {
-    const condLabel = s.action === 'pending-intact' ? 'Intact' : 'Needs surgery / sedation / HW+';
+    const condLabel = s.action === 'pending-intact' ? 'Altered' : 'Needs surgery / sedation / HW+';
     breadcrumbHTML = '<span>Pending medical assessment</span><span>' + condLabel + '</span>';
     title = 'Review and choose next step';
     sub = 'Review all notes, then select the appropriate path.';
